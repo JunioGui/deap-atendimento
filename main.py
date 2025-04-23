@@ -85,11 +85,12 @@ form_html = """
             padding: 1rem;
             font-size: 1.5rem;
         }
-        .logo {
+        .coren {
+            color: #004aad;
+            font-size: 2rem;
+            font-weight: bold;
+            font-family: 'Georgia', serif;
             margin: 1rem 0;
-        }
-        .logo img {
-            max-width: 200px;
         }
         form {
             background: white;
@@ -98,6 +99,7 @@ form_html = """
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             width: 90%;
             max-width: 500px;
+            text-align: center;
         }
         input, select, textarea {
             width: 100%;
@@ -129,23 +131,30 @@ form_html = """
 </head>
 <body>
     <header>Departamento de Atendimento ao Público - Deap</header>
-    <div class='logo'>
-        <img src='https://uploaddeimagens.com.br/images/004/759/503/full/logo-coren-df.png' alt='Logo Coren DF'>
-    </div>
+    <div class='coren'>COREN-DF</div>
     <form method='POST'>
-        <h2>Avalie aqui nosso atendimento</h2>
+        <h2 style='margin-bottom: 1rem;'>Avalie aqui nosso atendimento</h2>
         {% if erro %}<p style='color:red;'>{{ erro }}</p>{% endif %}
         <input type='text' name='nome_atendido' placeholder='Seu nome (opcional)'>
         <input type='text' name='cpf' placeholder='Seu CPF (000.000.000-00)' required>
         <input type='email' name='email' placeholder='Seu e-mail' required>
-        <input type='text' name='nome_atendente' placeholder='Nome do atendente' required>
+        <select name='nome_atendente' required>
+            <option value=''>Selecione o atendente</option>
+            <option value='Gilmar'>Gilmar</option>
+            <option value='Keven'>Keven</option>
+            <option value='Anilton'>Anilton</option>
+            <option value='Ana Paula'>Ana Paula</option>
+            <option value='Gabriela'>Gabriela</option>
+            <option value='Roger'>Roger</option>
+            <option value='Jhonny'>Jhonny</option>
+        </select>
         <select name='nota' required>
             <option value=''>Nota (1 a 5)</option>
-            <option value='1'>1</option>
-            <option value='2'>2</option>
-            <option value='3'>3</option>
-            <option value='4'>4</option>
-            <option value='5'>5</option>
+            <option value='1'>1 - Péssimo</option>
+            <option value='2'>2 - Ruim</option>
+            <option value='3'>3 - Regular</option>
+            <option value='4'>4 - Bom</option>
+            <option value='5'>5 - Excelente</option>
         </select>
         <textarea name='comentario' placeholder='Comentário'></textarea>
         <button type='submit'>Enviar</button>
