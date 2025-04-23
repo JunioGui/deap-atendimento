@@ -22,7 +22,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Página do formulário
+# Página do formulário com visual moderno
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -43,123 +43,56 @@ def index():
 
         return redirect(url_for('confirmacao'))
 
-    # Formulário HTML
     form_html = '''
-    <h2>Sistema de Avaliação de Atendimento</h2>
-    <form method="POST">
-        Nome (opcional): <input type="text" name="nome_atendido"><br><br>
-        Nome do atendente: <input type="text" name="nome_atendente" required><br><br>
-        Nota (1 a 5): <input type="number" name="nota" min="1" max="5" required><br><br>
-        Comentário:<br><textarea name="comentario"></textarea><br><br>
-        <button type="submit">Enviar</button>
-    </form>
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Avaliação de Atendimento</title>
+        <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; margin: 0; padding: 0; }
+            header { background: #003366; color: white; padding: 1rem; text-align: center; font-size: 1.5rem; }
+            .container { display: flex; justify-content: center; align-items: center; height: 80vh; }
+            form { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 300px; }
+            input, select, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 8px; }
+            button { background: #00509e; color: white; border: none; padding: 0.75rem; border-radius: 8px; width: 100%; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+            button:hover { background: #003f7f; }
+            footer { background: #003366; color: white; text-align: center; padding: 0.75rem; position: fixed; bottom: 0; width: 100%; font-size: 0.9rem; }
+            label i { margin-right: 5px; }
+        </style>
+        <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    </head>
+    <body>
+        <header>Departamento de Atendimento ao Público - Deap</header>
+        <div class="container">
+            <form method="post">
+                <label><i class="fas fa-user"></i> Nome (opcional):</label>
+                <input type="text" name="nome_atendido">
+                <label><i class="fas fa-id-badge"></i> Nome do atendente:</label>
+                <input type="text" name="nome_atendente" required>
+                <label><i class="fas fa-star"></i> Nota (1 a 5):</label>
+                <select name="nota" required>
+                    <option value="1">1 - Ruim</option>
+                    <option value="2">2 - Regular</option>
+                    <option value="3">3 - Bom</option>
+                    <option value="4">4 - Muito Bom</option>
+                    <option value="5">5 - Excelente</option>
+                </select>
+                <label><i class="fas fa-comment"></i> Comentário:</label>
+                <textarea name="comentario" rows="4"></textarea>
+                <button type="submit"><i class="fas fa-paper-plane"></i> Enviar</button>
+            </form>
+        </div>
+        <footer>Contato via WhatsApp: (61) 2102-3754</footer>
+    </body>
+    </html>
     '''
     return render_template_string(form_html)
 
-# Página de confirmação
 @app.route('/confirmacao')
 def confirmacao():
     return "<h2>Obrigado pelo seu feedback!</h2><a href='/'>Voltar</a>"
-
-# Exportar dados para Excel
-@app.route('/exportar_excel')
-def exportar_excel():
-    conn = sqlite3.connect('feedback.db')
-    df = pd.read_sql_query('SELECT nome_atendido, nome_atendente, nota, comentario, data_hora FROM feedback', conn)
-    conn.close()
-    arquivo = 'feedback_exportado.xlsx'
-    df.to_excel(arquivo, index=False)
-    return send_file(arquivo, as_attachment=True)
-
-# API para dados do gráfico
-@app.route('/grafico_dados')
-def grafico_dados():
-    conn = sqlite3.connect('feedback.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT nome_atendente, AVG(nota) as media
-        FROM feedback
-        GROUP BY nome_atendente
-    ''')
-    dados = cursor.fetchall()
-    conn.close()
-
-    nomes = [d[0] for d in dados]
-    medias = [d[1] for d in dados]
-    return jsonify({'nomes': nomes, 'medias': medias})
-
-# Página de relatórios
-@app.route('/relatorios')
-def relatorios():
-    atendente_filtro = request.args.get('atendente', '')
-
-    conn = sqlite3.connect('feedback.db')
-    cursor = conn.cursor()
-
-    if atendente_filtro:
-        cursor.execute('''
-            SELECT nome_atendido, nome_atendente, nota, comentario, data_hora
-            FROM feedback
-            WHERE nome_atendente LIKE ?
-            ORDER BY id DESC
-        ''', ('%' + atendente_filtro + '%',))
-    else:
-        cursor.execute('SELECT nome_atendido, nome_atendente, nota, comentario, data_hora FROM feedback ORDER BY id DESC')
-
-    dados = cursor.fetchall()
-    conn.close()
-
-    relatorio_html = '''
-    <h2>Relatório de Avaliações</h2>
-    <form method="get">
-        <input type="text" name="atendente" placeholder="Filtrar por atendente" value="{{ atendente_filtro }}">
-        <button type="submit">Filtrar</button>
-        <a href="/exportar_excel"><button type="button">Exportar para Excel</button></a>
-    </form>
-    <canvas id="graficoNotas"></canvas>
-    <table border="1" cellpadding="5" cellspacing="0">
-        <tr>
-            <th>Atendido</th>
-            <th>Atendente</th>
-            <th>Nota</th>
-            <th>Comentário</th>
-            <th>Data/Hora</th>
-        </tr>
-        {% for dado in dados %}
-        <tr>
-            <td>{{ dado[0] or 'Anônimo' }}</td>
-            <td>{{ dado[1] }}</td>
-            <td>{{ dado[2] }}</td>
-            <td>{{ dado[3] }}</td>
-            <td>{{ dado[4] }}</td>
-        </tr>
-        {% endfor %}
-    </table>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        fetch('/grafico_dados')
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById('graficoNotas').getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: data.nomes,
-                        datasets: [{
-                            label: 'Média das Notas',
-                            data: data.medias,
-                            backgroundColor: 'rgba(75, 192, 192, 0.6)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        scales: { y: { beginAtZero: true, max: 5 } }
-                    }
-                });
-            });
-    </script>
-    '''
-    return render_template_string(relatorio_html, dados=dados, atendente_filtro=atendente_filtro)
 
 if __name__ == '_main_':
     init_db()
