@@ -2,10 +2,11 @@ from flask import Flask, render_template_string, request, redirect, url_for, jso
 import sqlite3
 from datetime import datetime
 import pandas as pd
+import re
 
 app = Flask(__name__)
 
-# Configurar banco de dados
+# Banco de dados
 def init_db():
     conn = sqlite3.connect('feedback.db')
     cursor = conn.cursor()
@@ -13,6 +14,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS feedback (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome_atendido TEXT,
+            cpf TEXT,
+            email TEXT,
             nome_atendente TEXT,
             nota INTEGER,
             comentario TEXT,
@@ -22,78 +25,149 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Página do formulário com visual moderno
+# Página do formulário
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    erro = None
     if request.method == 'POST':
         nome_atendido = request.form.get('nome_atendido')
+        cpf = request.form.get('cpf')
+        email = request.form.get('email')
         nome_atendente = request.form.get('nome_atendente')
         nota = int(request.form.get('nota'))
         comentario = request.form.get('comentario')
-        data_hora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        conn = sqlite3.connect('feedback.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO feedback (nome_atendido, nome_atendente, nota, comentario, data_hora)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (nome_atendido, nome_atendente, nota, comentario, data_hora))
-        conn.commit()
-        conn.close()
+        # Validação CPF e e-mail
+        if not cpf or not re.match(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$', cpf):
+            erro = 'CPF inválido. Use o formato 000.000.000-00.'
+        elif not email or not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+            erro = 'Formato de e-mail inválido.'
 
-        return redirect(url_for('confirmacao'))
+        if not erro:
+            data_hora = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            conn = sqlite3.connect('feedback.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO feedback (nome_atendido, cpf, email, nome_atendente, nota, comentario, data_hora)
+                VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                (nome_atendido, cpf, email, nome_atendente, nota, comentario, data_hora))
+            conn.commit()
+            conn.close()
+            return redirect(url_for('confirmacao'))
 
-    form_html = '''
-    <!DOCTYPE html>
-    <html lang="pt-br">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Avaliação de Atendimento</title>
-        <style>
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; margin: 0; padding: 0; }
-            header { background: #003366; color: white; padding: 1rem; text-align: center; font-size: 1.5rem; }
-            .container { display: flex; justify-content: center; align-items: center; height: 80vh; }
-            form { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 300px; }
-            input, select, textarea { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 8px; }
-            button { background: #00509e; color: white; border: none; padding: 0.75rem; border-radius: 8px; width: 100%; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-            button:hover { background: #003f7f; }
-            footer { background: #003366; color: white; text-align: center; padding: 0.75rem; position: fixed; bottom: 0; width: 100%; font-size: 0.9rem; }
-            label i { margin-right: 5px; }
-        </style>
-        <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    </head>
-    <body>
-        <header>Departamento de Atendimento ao Público - Deap</header>
-        <div class="container">
-            <form method="post">
-                <label><i class="fas fa-user"></i> Nome (opcional):</label>
-                <input type="text" name="nome_atendido">
-                <label><i class="fas fa-id-badge"></i> Nome do atendente:</label>
-                <input type="text" name="nome_atendente" required>
-                <label><i class="fas fa-star"></i> Nota (1 a 5):</label>
-                <select name="nota" required>
-                    <option value="1">1 - Ruim</option>
-                    <option value="2">2 - Regular</option>
-                    <option value="3">3 - Bom</option>
-                    <option value="4">4 - Muito Bom</option>
-                    <option value="5">5 - Excelente</option>
-                </select>
-                <label><i class="fas fa-comment"></i> Comentário:</label>
-                <textarea name="comentario" rows="4"></textarea>
-                <button type="submit"><i class="fas fa-paper-plane"></i> Enviar</button>
-            </form>
-        </div>
-        <footer>Contato via WhatsApp: (61) 2102-3754</footer>
-    </body>
-    </html>
-    '''
-    return render_template_string(form_html)
+    return render_template_string(form_html, erro=erro)
 
 @app.route('/confirmacao')
 def confirmacao():
-    return "<h2>Obrigado pelo seu feedback!</h2><a href='/'>Voltar</a>"
+    return "<h2>Obrigado pela sua avaliação!</h2><a href='/'>Voltar</a>"
 
-if __name__ == '_main_':
+form_html = '''
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEAP - Avaliação</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        header {
+            width: 100%;
+            background-color: #003366;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .logo {
+            margin: 20px auto;
+            text-align: center;
+        }
+        .logo img {
+            max-width: 200px;
+            height: auto;
+        }
+        .form-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        button {
+            background-color: #004c99;
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background-color: #003366;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <header>Departamento de Atendimento ao Público - Deap</header>
+
+    <div class="logo">
+        <img src="https://uploaddeimagens.com.br/images/004/759/503/full/logo-coren-df.png" alt="Logo Coren-DF">
+    </div>
+
+    <div class="form-container">
+        <h2>Avalie aqui nosso atendimento</h2>
+        {% if erro %}<p style="color:red;">{{ erro }}</p>{% endif %}
+        <form method="post">
+            <input type="text" name="nome_atendido" placeholder="Seu nome (opcional)">
+            <input type="text" name="cpf" placeholder="Seu CPF (000.000.000-00)" required>
+            <input type="email" name="email" placeholder="Seu e-mail" required>
+            <input type="text" name="nome_atendente" placeholder="Nome do atendente" required>
+            <select name="nota" required>
+                <option value="">Nota (1 a 5)</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+            <textarea name="comentario" placeholder="Comentário" rows="4"></textarea>
+            <button type="submit">Enviar</button>
+        </form>
+        <footer>
+            <i class="fab fa-whatsapp"></i> (61) 2102-3754
+        </footer>
+    </div>
+</body>
+</html>
+'''
+
+if __name__ == '__main__':
     init_db()
     app.run(host='0.0.0.0', port=3000)
