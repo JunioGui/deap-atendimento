@@ -1,1 +1,20 @@
 curl ifconfig.me
+sqlite3 feedback.db
+.tables
+SELECT * FROM feedback;
+@app.route('/exportar')
+def exportar():
+    conn = sqlite3.connect('feedback.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM feedback')
+    dados = cursor.fetchall()
+    conn.close()
+
+    # Gera CSV na memória
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Nome Atendido', 'CPF', 'E-mail', 'Nome Atendente', 'Nota', 'Comentário', 'Data/Hora'])
+    writer.writerows(dados)
+
+    output.seek(0)
+    return send_file(io.BytesIO(output.getvalue().encode()), mimetype='text/csv', as_attachment=True, download_name='avaliacoes.csv')

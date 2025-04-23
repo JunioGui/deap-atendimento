@@ -2,6 +2,9 @@ from flask import Flask, render_template_string, request, redirect, url_for
 import sqlite3
 from datetime import datetime
 import re
+import csv
+import io
+from flask import send_file
 
 app = Flask(__name__)
 
@@ -57,6 +60,26 @@ def index():
 @app.route('/confirmacao')
 def confirmacao():
     return "<h2>Obrigado pela sua avaliação!</h2><a href='/'>Voltar</a>"
+@app.route('/exportar')
+def exportar():
+    conn = sqlite3.connect('feedback.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM feedback')
+    dados = cursor.fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Nome Atendido', 'CPF', 'E-mail', 'Nome Atendente', 'Nota', 'Comentário', 'Data/Hora'])
+    writer.writerows(dados)
+
+    output.seek(0)
+    return send_file(
+        io.BytesIO(output.getvalue().encode()),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name='avaliacoes.csv'
+    )
 
 form_html = """
 <!DOCTYPE html>
